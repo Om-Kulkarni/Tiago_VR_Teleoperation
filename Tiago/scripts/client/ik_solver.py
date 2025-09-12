@@ -7,12 +7,21 @@ class IKSolver:
     A class to handle Inverse Kinematics calculations for the Tiago robot,
     with logic adapted from a working pybullet simulation.
     """
-    def __init__(self):
-        """Initializes the IKSolver by loading the robot into a headless pybullet instance."""
+    def __init__(self, use_gui=False):
+        """Initializes the IKSolver by loading the robot into a pybullet instance."""
         logging.info("Initializing IKSolver with pybullet.")
         try:
-            # Step 1: Connect to pybullet in "DIRECT" mode (no GUI).
-            self.physics_client = p.connect(p.DIRECT)
+            # Step 1: Connect to pybullet in GUI or DIRECT mode.
+            self.use_gui = use_gui
+            if self.use_gui:
+                self.physics_client = p.connect(p.GUI)
+                p.resetDebugVisualizerCamera(cameraDistance=1.5, cameraYaw=50, cameraPitch=-35, cameraTargetPosition=[0.5, 0, 0.7])
+                # Create a red sphere to visualize the IK target
+                sphere_shape = p.createVisualShape(p.GEOM_SPHERE, radius=0.03, rgbaColor=[1, 0, 0, 0.8])
+                self.target_marker_id = p.createMultiBody(baseVisualShapeIndex=sphere_shape)
+            else:
+                self.physics_client = p.connect(p.DIRECT)
+                self.target_marker_id = None
 
             # Step 2: Load the URDF file.
             logging.info(f"Loading URDF for IK solver from: {config.URDF_FILE_PATH}")
@@ -56,6 +65,9 @@ class IKSolver:
             logging.info(f"Torso IK solution index: {self.torso_ik_index}")
             logging.info(f"Arm IK solution indices: {self.arm_ik_indices}")
 
+            # Store the absolute indices of all joints we are controlling for visualization
+            self.controlled_joint_indices = [21] + arm_absolute_indices
+
         except Exception:
             logging.exception("Failed to initialize pybullet IKSolver")
             self.disconnect()
@@ -66,6 +78,9 @@ class IKSolver:
         Calculates the target joint angles for a given end-effector pose.
         """
         try:
+            if self.use_gui and self.target_marker_id is not None:
+                p.resetBasePositionAndOrientation(self.target_marker_id, target_position, [0, 0, 0, 1])
+
             # This call returns a solution for ALL movable joints.
             full_ik_solution = p.calculateInverseKinematics(
                 bodyUniqueId=self.robot_id,
@@ -82,8 +97,19 @@ class IKSolver:
             torso_pose = full_ik_solution[self.torso_ik_index]
             arm_poses = [full_ik_solution[i] for i in self.arm_ik_indices]
             
-            # Return the combined 8-joint solution
-            return [torso_pose] + arm_poses
+            # Combine the 8-joint solution
+            target_joint_angles = [torso_pose] + arm_poses
+
+            # If in GUI mode, update the robot's pose to visualize the IK solution
+            if self.use_gui:
+                for i, joint_index in enumerate(self.controlled_joint_indices):
+                    p.resetJointState(
+                        bodyUniqueId=self.robot_id,
+                        jointIndex=joint_index,
+                        targetValue=target_joint_angles[i]
+                    )
+            
+            return target_joint_angles
 
         except Exception:
             logging.exception("IK calculation failed")
@@ -103,7 +129,7 @@ if __name__ == '__main__':
     
     solver = None
     try:
-        solver = IKSolver()
+        solver = IKSolver(False)
         print("\n--- IKSolver initialized successfully with pybullet! ---")
         
         # Example calculation

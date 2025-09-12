@@ -27,13 +27,21 @@ def handle_unity_connection(unity_conn, ik_solver, robot_client):
             
             # The message from Unity should contain the target pose and current joint angles
             unity_data = json.loads(json_data.decode('utf-8'))
-            
-            target_pos = unity_data.get("target_position")
-            target_orn = unity_data.get("target_orientation")
+
+            # Extract the dictionaries from the payload
+            pos_dict = unity_data.get("target_position", {})
+            orn_dict = unity_data.get("target_orientation", {})
             current_angles = unity_data.get("current_joint_angles")
+
+            # Convert dictionaries into lists that pybullet can understand
+            target_pos = [pos_dict.get('x', 0), pos_dict.get('y', 0), pos_dict.get('z', 0)]
+            target_orn = [orn_dict.get('x', 0), orn_dict.get('y', 0), orn_dict.get('z', 0), orn_dict.get('w', 1)]
             
             # --- Step 2: Calculate Inverse Kinematics ---
             target_joint_angles = ik_solver.calculate_ik(current_angles, target_pos, target_orn)
+
+            # Extract gripper command to use in both modes
+            gripper_command = unity_data.get("gripper_command", 0)
             
             # --- Step 3: Decide what to do based on the config flag ---
             if config.CONNECT_TO_ROBOT:
@@ -53,7 +61,8 @@ def handle_unity_connection(unity_conn, ik_solver, robot_client):
                 # --- SIMULATION MODE ---
                 response_data = {
                     "status": "success",
-                    "joint_trajectory": target_joint_angles
+                    "joint_trajectory": target_joint_angles,
+                    "gripper_command": gripper_command
                 }
 
             # Step 4: Send the appropriate response back to Unity
@@ -81,7 +90,7 @@ def main():
 
     try:
         # Initialize the IK solver
-        ik_solver = IKSolver()
+        ik_solver = IKSolver(True)
 
         # Initialize the real robot client if the flag is set
         if config.CONNECT_TO_ROBOT:

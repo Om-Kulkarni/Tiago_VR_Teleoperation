@@ -3,5 +3,6 @@ A Unity Project with additional robot scripts that help me teleoperate our old m
 
 <img width="521" height="910" alt="image" src="https://github.com/user-attachments/assets/6f0bc832-77b4-44ef-9ba2-35759ce29097" />
 
-![Untitled video - Made with Clipchamp (1)](https://github.com/user-attachments/assets/4701209a-a049-4074-b479-d47959a19e07)
+![Untitled video - Made with Clipchamp (1)](https://github.com/user-attachments/assets/f1d150c6-cd07-4ec4-b4d3-fbf503fd98fe)
+
 

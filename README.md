@@ -1,4 +1,4 @@
-# Tiago_VR_Teleoperation
+# Tiago_VR_Teleoperation (In-Progress)
 A Unity Project with additional robot scripts that help me teleoperate our old man Tiago using Unity VR
 
 <img width="521" height="910" alt="image" src="https://github.com/user-attachments/assets/6f0bc832-77b4-44ef-9ba2-35759ce29097" />
